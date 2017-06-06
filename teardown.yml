@@ -1,0 +1,2 @@
+- include: tripleo-quickstart/playbooks/teardown-nodes.yml
+- include: tripleo-quickstart/playbooks/teardown-environment.yml
