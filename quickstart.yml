@@ -56,3 +56,8 @@
     - undercloud-scripts
   roles:
     - tripleo-inventory
+
+- name: Setup virtualbmc
+  hosts: undercloud
+  tasks:
+    - include: tripleo-quickstart-extras/roles/undercloud-deploy/tasks/configure-vbmc.yml
