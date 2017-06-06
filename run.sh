@@ -11,3 +11,4 @@ set -eux
     -e undercloud_user=stack \
     -e ssh_user=$(whoami) \
     -e working_dir=$HOME \
+    $@
