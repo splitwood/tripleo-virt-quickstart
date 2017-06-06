@@ -49,7 +49,19 @@
   roles:
     - tripleo-inventory
 
+# For some reason, when including tasks (not playbooks), the inventory and vars
+# are not defined, so we need to redo some of it.
 - name: Setup virtualbmc
   hosts: undercloud
+  gather_facts: no
+  vars:
+    external_network_cidr: 192.168.23.0/24
   tasks:
+    - name: Add virthost
+      add_host:
+        name: virthost
+        groups: "virthost"
+        ansible_fqdn: "{{ virthost }}"
+        ansible_user: "root"
+        ansible_host: "{{ virthost }}"
     - include: tripleo-quickstart-extras/roles/undercloud-deploy/tasks/configure-vbmc.yml
