@@ -45,8 +45,8 @@
   gather_facts: yes
   roles:
     - libvirt/setup/user
-    - libvirt/setup/undercloud
     - libvirt/setup/overcloud
+    - libvirt/setup/undercloud
 
 
 - name: Add the undercloud node to the generated inventory
