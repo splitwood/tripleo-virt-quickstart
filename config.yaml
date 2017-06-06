@@ -1,0 +1,52 @@
+# libvirt_uri: qemu:///system
+# libvirt_volume_pool: default
+# libvirt_volume_path: /var/lib/libvirt/images
+
+undercloud_image_url: https://images.rdoproject.org/master/delorean/current-tripleo/stable/undercloud.qcow2
+
+default_memory: 4096
+undercloud_memory: 12288
+
+default_vcpu: 2
+undercloud_vcpu: 4
+
+overcloud_nodes:
+  - name: baremetal_0
+    flavor: baremetal
+    virtualbmc_port: 6234
+  - name: baremetal_1
+    flavor: baremetal
+    virtualbmc_port: 6235
+  - name: baremetal_2
+    flavor: baremetal
+    virtualbmc_port: 6236
+  - name: baremetal_3
+    flavor: baremetal
+    virtualbmc_port: 6237
+
+flavors:
+  undercloud:
+    memory: 4096
+    disk: 50
+    vcpu: 2
+  baremetal:
+    memory: 4096
+    disk: 40
+    vcpu: 2
+
+networks:
+  - name: external
+    bridge: brext
+    forward_mode: nat
+    address: "{{ external_network_cidr|nthhost(1) }}"
+    netmask: "{{ external_network_cidr|ipaddr('netmask') }}"
+    dhcp_range:
+      - "{{ external_network_cidr|nthhost(10) }}"
+      - "{{ external_network_cidr|nthhost(50) }}"
+    nat_port_range:
+      - 1024
+      - 65535
+
+  - name: provisioning
+    bridge:  provisioning
+
