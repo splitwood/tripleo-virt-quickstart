@@ -3,7 +3,7 @@
 set -eux
 
 ~/.quickstart/bin/ansible-playbook \
-    tripleo-quickstart/playbooks/quickstart.yml \
+    quickstart.yml \
     -e @config.yaml \
     -M tripleo-quickstart/library \
     -e virthost=$(hostname) \
