@@ -2,6 +2,8 @@
 # libvirt_volume_pool: default
 # libvirt_volume_path: /var/lib/libvirt/images
 
+release: master
+
 undercloud_image_url: https://images.rdoproject.org/master/delorean/current-tripleo/stable/undercloud.qcow2
 
 default_memory: 4096
