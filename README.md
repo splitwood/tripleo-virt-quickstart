@@ -34,3 +34,10 @@ Use any non-root user (e.g., the user created above):
 Running
 -------
     ./run.sh
+
+Login to undercloud
+-------------------
+
+After run.sh, use the following command to login to the running undercloud vm.
+
+    ssh -F ~/.quickstart/ssh.config.ansible undercloud
