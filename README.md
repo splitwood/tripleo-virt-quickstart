@@ -12,15 +12,15 @@ Ensure the CentOS installation is up to date:
 
     yum -y update
 
+Install git if needed:
+
+    yum -y install git
+
 If necessary, create a non-root user, and become that user:
 
     useradd -G wheel centos
     passwd centos # Set a password
     su - centos
-
-Install git if needed:
-
-    yum -y install git
 
 Installation
 ------------
