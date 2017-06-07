@@ -15,6 +15,12 @@
   tags:
     - provision
 
+# Apparently needed as /run/user/$(id -u) is not always created
+- name: Enable linger for {{ non_root_user }}
+  hosts: virthost
+  tasks:
+    - command: loginctl enable-linger {{ non_root_user }}
+
 # The `provision.yml` playbook is responsible for
 # creating an inventory entry for our `virthost` and for creating an
 # unprivileged user on that host for use by our virtual environment.
