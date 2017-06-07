@@ -20,4 +20,8 @@ ssh \
 [ -d tripleo-quickstart-extras ] || git clone https://git.openstack.org/openstack/tripleo-quickstart-extras
 
 tripleo-quickstart/quickstart.sh --install-deps
-tripleo-quickstart/quickstart.sh --bootstrap
+# Technically, running with just --bootstrap is not supported, so after the
+# bootstrap is done, the help message is printed
+tripleo-quickstart/quickstart.sh --bootstrap || :
+
+echo "Bootstrap Done. Success."
