@@ -38,7 +38,6 @@
   roles:
     - libvirt/setup/user
     - libvirt/setup/overcloud
-    - libvirt/setup/undercloud
 
 
 - name: Add the undercloud node to the generated inventory
@@ -49,10 +48,17 @@
   roles:
     - tripleo-inventory
 
+- name: Setup Installer node
+  hosts: virthost
+  gather_facts: no
+  roles:
+    - libvirt
+    - installer
+
 # For some reason, when including tasks (not playbooks), the inventory and vars
 # are not defined, so we need to redo some of it.
 - name: Setup virtualbmc
-  hosts: undercloud
+  hosts: installer
   gather_facts: no
   vars:
     external_network_cidr: 192.168.23.0/24

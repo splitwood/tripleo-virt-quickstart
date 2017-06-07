@@ -8,7 +8,7 @@ set -eux
     -M tripleo-quickstart/library \
     -e virthost=$(hostname) \
     -e non_root_user=$(whoami) \
-    -e undercloud_user=stack \
+    -e installer_user=stack \
     -e ssh_user=$(whoami) \
     -e working_dir=$HOME \
     $@

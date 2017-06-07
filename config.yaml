@@ -4,7 +4,17 @@
 
 release: master
 
-undercloud_image_url: https://images.rdoproject.org/master/delorean/current-tripleo/stable/undercloud.qcow2
+# installer_image_url: file:///home/{{ non_root_user}}/rhel-atomic-cloud-7.3.5-7.x86_64.qcow2
+installer_image_url: file:///home/{{ non_root_user}}/CentOS-7-x86_64-GenericCloud.qcow2
+installer_key: "{{ local_working_dir }}/id_rsa_installer"
+undercloud_key: "{{ local_working_dir }}/id_rsa_installer"
+virt_power_key: "{{ local_working_dir }}/id_rsa_virt_power"
+inject_instackenv: true
+
+images:
+  - name: installer
+    url: "{{ installer_image_url }}"
+    type: qcow2
 
 default_memory: 4096
 undercloud_memory: 12288
@@ -26,11 +36,15 @@ overcloud_nodes:
     flavor: baremetal
     virtualbmc_port: 6237
 
+installer_node:
+  name: installer
+  flavor: installer
+
 flavors:
-  undercloud:
-    memory: 4096
-    disk: 50
-    vcpu: 2
+  installer:
+    memory: 8192
+    disk: 40
+    vcpu: 4
   baremetal:
     memory: 4096
     disk: 40
@@ -51,4 +65,3 @@ networks:
 
   - name: provisioning
     bridge:  provisioning
-

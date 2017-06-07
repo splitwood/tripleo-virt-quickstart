@@ -1,0 +1,231 @@
+# We're going to try putting files in `local_working_dir`, so make
+# sure it exists first.
+- name: Ensure local working dir exists
+  file:
+    path: "{{ local_working_dir }}"
+    state: directory
+
+# Generate MAC addresses for the installer node.
+- name: get MACs for the installer
+  generate_macs:
+    nodes:
+      - "{{ installer_node }}"
+    networks: "{{ networks }}"
+  register: installer_mac_map
+
+# Check if the installer volume exists.  If not, we call out to
+# [fetch_image.yml](fetch_image.yml.html) to download the image.
+- name: Check if installer volume exists
+  command: >
+    virsh vol-info --pool '{{ libvirt_volume_pool }}'
+    '{{ installer_node.name }}.qcow2'
+  ignore_errors: true
+  changed_when: false
+  register: installer_vol_check
+  environment:
+    LIBVIRT_DEFAULT_URI: "{{ libvirt_uri }}"
+
+- when: installer_vol_check|failed
+  environment:
+    LIBGUESTFS_BACKEND: direct
+    LIBVIRT_DEFAULT_URI: "{{ libvirt_uri }}"
+  block:
+  # Conditionally include a playbook for all the images specified
+  # in options that downloads, cache and extract if tar archived
+  # only if the images aren't already in volume pool
+  - name: Fetch the images
+    include_role:
+      name: fetch-images
+
+- name: Create initial user in image
+  command: >
+    virt-customize -a {{ working_dir }}/installer.qcow2
+    --run-command 'useradd -G wheel {{ installer_user }}'
+
+# This copies the `instackenv.json` configuration file that we
+# generated in the overcloud setup role to the installer host.
+- name: Copy instackenv.json to appliance
+  command: >
+    virt-customize -a {{ working_dir }}/installer.qcow2
+    --upload {{ working_dir }}/instackenv.json:/home/{{ installer_user }}/instackenv.json
+    --run-command 'chown {{ installer_user }}:{{ installer_user }} /home/{{ installer_user }}/instackenv.json'
+  when: inject_instackenv|bool
+
+# Copy the installer public key to the virthost, because we're going
+# to inject it into the installer image in the next task.
+- name: Copy installer ssh public key to working dir
+  copy:
+    src: "{{ installer_key }}.pub"
+    dest: "{{ working_dir }}/id_rsa_installer.pub"
+
+# Copy the virt host private key to `$HOME/.ssh/id_rsa_virt_power` for
+# VirtualBMC be able to access the hypervisor where the VMs are located
+- name: Copy virt host ssh private key to working dir
+  when: release not in ['liberty', 'mitaka', 'newton']
+  copy:
+    src: "{{ virt_power_key }}"
+    dest: "{{ working_dir }}/id_rsa_virt_power"
+
+# Copy the public key to `$HOME/.ssh/authorized_keys` for the `root`
+# and `installer_user` user on the installer.
+- name: Inject installer ssh public key to appliance
+  command: >
+    virt-customize -a {{ working_dir }}/installer.qcow2
+    --mkdir {{item.homedir}}/.ssh/
+    --upload '{{ working_dir }}/id_rsa_installer.pub:{{item.homedir}}/.ssh/authorized_keys'
+    --run-command 'chown -R {{item.owner}}:{{item.group}} {{item.homedir}}/.ssh'
+    --run-command 'chmod 0700 {{item.homedir}}/.ssh'
+    --run-command 'chmod 0600 {{item.homedir}}/.ssh/authorized_keys'
+  with_items:
+    - homedir: /root
+      owner: root
+      group: root
+    - homedir: '/home/{{ installer_user }}'
+      owner: '{{ installer_user }}'
+      group: '{{ installer_user }}'
+
+# This copies the `id_rsa_virt_power` private key that we generated
+# in the overcloud setup role to the installer host to be used by
+# VirtualBMC+libvirt to access the virthost.
+- name: Copy id_rsa_virt_power to appliance
+  when: release not in ['liberty', 'mitaka', 'newton']
+  command: >
+    virt-customize -a {{ working_dir }}/installer.qcow2
+    --upload '{{ working_dir }}/id_rsa_virt_power:/root/.ssh/id_rsa_virt_power'
+    --run-command 'chown root:root /root/.ssh/id_rsa_virt_power'
+    --run-command 'chmod 0600 /root/.ssh/id_rsa_virt_power'
+
+# Perform an SELinux relabel on the installer image to avoid problems
+# caused by bad labelling, since by default the installer runs in
+# enforcing mode.
+- name: Perform selinux relabel on installer image
+  command: >
+    virt-customize -a {{ working_dir }}/installer.qcow2
+    --selinux-relabel
+
+- name: >
+    Determine if the installer image is a whole disk image
+    so we can resize it appropriately
+  command: >
+    virt-filesystems -a {{ working_dir }}/installer.qcow2
+  environment:
+    LIBGUESTFS_BACKEND: direct
+  register: installer_partitions
+
+- when:
+    - installer_partitions.stdout=='/dev/sda1'
+  block:
+  # Handle the resize for the whole disk image case
+  - name: Resize installer image (create target image)
+    command: >
+      qemu-img create -f qcow2 -o preallocation=off
+      '{{ working_dir }}/installer-resized.qcow2'
+      '{{ flavors[installer_node.flavor].disk }}G'
+
+  - name: Resize installer image (call virt-resize)
+    command: >
+      virt-resize --expand /dev/sda1
+      '{{ working_dir }}/installer.qcow2'
+      '{{ working_dir }}/installer-resized.qcow2'
+    environment:
+      LIBGUESTFS_BACKEND: direct
+
+  - name: Rename resized image to original name
+    command: >
+      mv -f '{{ working_dir }}/installer-resized.qcow2'
+            '{{ working_dir }}/installer.qcow2'
+
+- when: installer_vol_check|failed
+  environment:
+    LIBVIRT_DEFAULT_URI: "{{ libvirt_uri }}"
+  block:
+  # Create a libvirt volume and upload the installer image to
+  # libvirt.
+  - name: Create installer volume
+    command: >
+      virsh vol-create-as {{ libvirt_volume_pool}}
+      {{ installer_node.name }}.qcow2
+      {{ flavors[installer_node.flavor].disk }}G --format qcow2
+
+  - name: Upload installer volume to storage pool
+    command: >
+      virsh -k 0 vol-upload --pool '{{ libvirt_volume_pool }}'
+      '{{ installer_node.name }}.qcow2'
+      '{{ working_dir }}/installer.qcow2'
+    async: 600
+    poll: 10
+
+# Define (but do no start) the installer virtual machine.
+- name: Define installer vm
+  virt:
+    name: "{{ installer_node.name }}"
+    command: define
+    xml: "{{ lookup('template', 'installervm.xml.j2') }}"
+    uri: "{{ libvirt_uri }}"
+
+- name: Ensure file permissions if root used as task runner
+  file:
+    path: "{{ working_dir }}"
+    owner: "{{ non_root_user }}"
+    group: "{{ non_root_user }}"
+    mode: "a+x"
+    recurse: yes
+    state: 'directory'
+  when: non_root_chown|bool
+
+# Start the installer virtual machine.
+- name: Start installer vm
+  virt:
+    name: "{{ installer_node.name }}"
+    command: start
+    state: running
+    uri: "{{ libvirt_uri }}"
+
+# Configure the installer virtual machine to be
+# automatically started at boot.
+- name: Configure installer vm to start at virthost boot
+  virt:
+    name: "{{ installer_node.name }}"
+    command: autostart
+    uri: "{{ libvirt_uri }}"
+
+# Get the ip address of the installer.  This will retry several times
+# (`installer_ip_retries`) until the installer is ready.  The script
+# works by getting the MAC address of the first installer interface,
+# and then looking that up in the kernel ARP table.
+- name: Get installer vm ip address
+  script: "get-installer-ip.sh {{ installer_node.name }}"
+  register: installer_vm_ip_result
+  until: installer_vm_ip_result|success
+  retries: "{{ installer_ip_retries }}"
+  delay: 10
+  environment:
+    LIBVIRT_DEFAULT_URI: "{{ libvirt_uri }}"
+
+- name: Set_fact for installer ip
+  set_fact:
+    installer_ip: "{{ installer_vm_ip_result.stdout_lines[0] }}"
+
+- name: Wait until ssh is available on installer node
+  wait_for:
+    host: "{{ installer_ip }}"
+    state: started
+    port: 22
+    timeout: 600
+
+# Add the installer to the in-memory inventory.
+- name: Add installer vm to inventory
+  add_host:
+    name: installer
+    groups: installer
+    ansible_host: installer
+    ansible_fqdn: installer
+    ansible_user: '{{ installer_user }}'
+    ansible_private_key_file: "{{ installer_key }}"
+    ansible_ssh_extra_args: '-F "{{local_working_dir}}/ssh.config.ansible"'
+    installer_ip: "{{ installer_ip }}"
+
+- name: Generate ssh configuration
+  template:
+    src: templates/ssh.config.j2
+    dest: "{{ local_working_dir }}/ssh.config.ansible"
