@@ -1,6 +1,6 @@
 # tripleo-virt-quickstart
 
-These steps have been tested on CentOS 7.
+These steps have been tested on CentOS 7 host.
 
 Setup
 -----
@@ -10,6 +10,9 @@ If necessary, create a non-root user with sudo access, and become that user:
     useradd -G wheel centos
     passwd centos # Set a password
     su - centos
+
+Further configure the user so that it can ssh as root into the host without a
+password prompt.
 
 The rest of the example commands assume using a non-root user with sudo
 access.
