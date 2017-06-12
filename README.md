@@ -1,26 +1,26 @@
 # tripleo-virt-quickstart
 
-All of the following commands should be run directly on the system that will
-host the libvirt vm's as a non-root user with sudo access.
-
 These steps have been tested on CentOS 7.
 
 Setup
 -----
 
-Ensure the CentOS installation is up to date:
-
-    yum -y update
-
-Install git if needed:
-
-    yum -y install git
-
-If necessary, create a non-root user, and become that user:
+If necessary, create a non-root user with sudo access, and become that user:
 
     useradd -G wheel centos
     passwd centos # Set a password
     su - centos
+
+The rest of the example commands assume using a non-root user with sudo
+access.
+
+Ensure the CentOS installation is up to date:
+
+    sudo yum -y update
+
+Install git if needed:
+
+    sudo yum -y install git
 
 Installation
 ------------
