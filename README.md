@@ -35,11 +35,11 @@ Use any non-root user (e.g., the user created above):
 
     git clone https://github.com/slagle/tripleo-virt-quickstart.git
     cd tripleo-virt-quickstart
-    ./bootstrap.sh
+    ./bootstrap.sh > bootstrap.log 2>&1
 
 Running
 -------
-    ./run.sh
+    ./run.sh > run.log 2>&1
 
 Login to undercloud
 -------------------
