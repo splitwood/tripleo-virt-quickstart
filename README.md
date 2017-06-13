@@ -12,7 +12,10 @@ If necessary, create a non-root user with sudo access, and become that user:
     su - centos
 
 Further configure the user so that it can ssh as root into the host without a
-password prompt.
+password prompt, e.g.:
+
+    ssh-keygen
+    ssh-copy-id root@$(hostname)
 
 The rest of the example commands assume using a non-root user with sudo
 access.
