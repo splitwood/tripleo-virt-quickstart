@@ -33,7 +33,7 @@ Installation
 
 Use any non-root user (e.g., the user created above):
 
-    git clone https://github.com/slagle/tripleo-virt-quickstart.git
+    git clone https://github.com/splitwood/tripleo-virt-quickstart.git
     cd tripleo-virt-quickstart
     ./bootstrap.sh > bootstrap.log 2>&1
 
