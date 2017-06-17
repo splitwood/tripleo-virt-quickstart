@@ -4,7 +4,7 @@
 
 release: master
 
-undercloud_image_url: https://images.rdoproject.org/master/delorean/current-tripleo/stable/undercloud.qcow2
+undercloud_image_url: https://slagle.fedorapeople.org/woodshed-images/undercloud-2d54c1fec0dc3bb90ba1035c276275da.qcow2
 
 default_memory: 4096
 undercloud_memory: 12288
